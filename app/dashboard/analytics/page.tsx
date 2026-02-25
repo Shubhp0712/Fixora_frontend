@@ -19,14 +19,14 @@ export default function AnalyticsPage() {
 
     const { data: allTickets } = useQuery({
         queryKey: ['all-tickets'],
-        queryFn: () => fetchTickets({ per_page: 1000 }),
+        queryFn: () => fetchTickets({ page_size: 1000 }),
     });
 
     // Process data for charts
     const getCategoryData = () => {
-        if (!allTickets?.data) return [];
+        if (!allTickets?.tickets) return [];
         const categoryCount: Record<string, number> = {};
-        allTickets.data.forEach((ticket) => {
+        allTickets.tickets.forEach((ticket) => {
             categoryCount[ticket.category] = (categoryCount[ticket.category] || 0) + 1;
         });
         return Object.entries(categoryCount).map(([name, value]) => ({
@@ -36,9 +36,9 @@ export default function AnalyticsPage() {
     };
 
     const getStatusData = () => {
-        if (!allTickets?.data) return [];
+        if (!allTickets?.tickets) return [];
         const statusCount: Record<string, number> = {};
-        allTickets.data.forEach((ticket) => {
+        allTickets.tickets.forEach((ticket) => {
             statusCount[ticket.status] = (statusCount[ticket.status] || 0) + 1;
         });
         return Object.entries(statusCount).map(([name, value]) => ({
@@ -48,9 +48,9 @@ export default function AnalyticsPage() {
     };
 
     const getPriorityData = () => {
-        if (!allTickets?.data) return [];
+        if (!allTickets?.tickets) return [];
         const priorityCount: Record<string, number> = {};
-        allTickets.data.forEach((ticket) => {
+        allTickets.tickets.forEach((ticket) => {
             priorityCount[ticket.priority] = (priorityCount[ticket.priority] || 0) + 1;
         });
         return Object.entries(priorityCount).map(([name, value]) => ({
@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
     };
 
     const getTrendData = () => {
-        if (!allTickets?.data) return [];
+        if (!allTickets?.tickets) return [];
 
         // Group tickets by date (last 7 days)
         const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
         });
 
         const trendData = last7Days.map((date) => {
-            const dayTickets = allTickets.data.filter((ticket) => {
+            const dayTickets = allTickets.tickets.filter((ticket) => {
                 return ticket.created_at.startsWith(date);
             });
 
@@ -114,8 +114,8 @@ export default function AnalyticsPage() {
                         <span className="text-3xl">✅</span>
                     </div>
                     <p className="text-4xl font-bold">
-                        {allTickets?.data
-                            ? Math.round((allTickets.data.filter(t => t.status === 'resolved' || t.status === 'closed').length / allTickets.data.length) * 100)
+                        {allTickets?.tickets
+                            ? Math.round((allTickets.tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length / allTickets.tickets.length) * 100)
                             : 0}%
                     </p>
                     <p className="text-green-100 text-sm mt-2">Success rate</p>
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
                         <span className="text-purple-100 text-sm font-medium">Avg Resolution</span>
                         <span className="text-3xl">⏱️</span>
                     </div>
-                    <p className="text-4xl font-bold">{stats?.average_resolution_time || 0}h</p>
+                    <p className="text-4xl font-bold">{stats?.average_resolution_hours || 0}h</p>
                     <p className="text-purple-100 text-sm mt-2">Time to resolve</p>
                 </div>
 

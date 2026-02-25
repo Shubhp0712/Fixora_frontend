@@ -14,6 +14,8 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+console.log('API_URL configured as:', API_URL);
+
 const apiClient = axios.create({
     baseURL: API_URL,
     headers: {
@@ -21,15 +23,53 @@ const apiClient = axios.create({
     },
 });
 
+// Add request/response interceptors for debugging
+apiClient.interceptors.request.use(
+    (config) => {
+        console.log('API Request:', config.method?.toUpperCase(), config.baseURL + config.url, config.params);
+        return config;
+    },
+    (error) => {
+        console.error('API Request Error:', error);
+        return Promise.reject(error);
+    }
+);
+
+apiClient.interceptors.response.use(
+    (response) => {
+        console.log('API Response:', response.status, response.config.url);
+        return response;
+    },
+    (error) => {
+        console.error('API Response Error:', {
+            message: error.message,
+            url: error.config?.url,
+            status: error.response?.status,
+            data: error.response?.data,
+        });
+        return Promise.reject(error);
+    }
+);
+
 // Ticket APIs
 export async function fetchTickets(filters?: {
     status?: string;
     priority?: string;
     category?: string;
     page?: number;
-    per_page?: number;
-}): Promise<PaginatedResponse<Ticket>> {
-    const response = await apiClient.get('/tickets/', { params: filters });
+    page_size?: number;
+}): Promise<{ tickets: Ticket[]; total: number; page: number; page_size: number }> {
+    // Remove empty string values from params - backend rejects them with 422
+    const cleanParams: Record<string, any> = {};
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            // Only include the param if it's not an empty string
+            if (value !== '' && value !== null && value !== undefined) {
+                cleanParams[key] = value;
+            }
+        });
+    }
+    const response = await apiClient.get('/tickets/', { params: cleanParams });
     return response.data;
 }
 
@@ -67,7 +107,7 @@ export async function assignTicket(id: number, assigned_to_id: number): Promise<
     return response.data;
 }
 
-export async function fetchUserTickets(userId: number): Promise<Ticket[]> {
+export async function fetchUserTickets(userId: number): Promise<{ tickets: Ticket[]; total: number }> {
     const response = await apiClient.get(`/tickets/user/${userId}`);
     return response.data;
 }
@@ -81,13 +121,13 @@ export async function fetchTicketActivities(ticketId: number): Promise<TicketAct
 export async function fetchKBArticles(filters?: {
     category?: string;
     page?: number;
-    per_page?: number;
-}): Promise<PaginatedResponse<KnowledgeBase>> {
+    page_size?: number;
+}): Promise<{ articles: KnowledgeBase[]; total: number; page: number; page_size: number }> {
     const response = await apiClient.get('/kb/', { params: filters });
     return response.data;
 }
 
-export async function searchKB(query: string): Promise<KnowledgeBase[]> {
+export async function searchKB(query: string): Promise<{ results: KnowledgeBase[]; total: number }> {
     const response = await apiClient.get('/kb/search', { params: { q: query } });
     return response.data;
 }
@@ -118,8 +158,12 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 }
 
 // User APIs
-export async function fetchUsers(): Promise<User[]> {
-    const response = await apiClient.get('/users/');
+export async function fetchUsers(filters?: {
+    role?: string;
+    page?: number;
+    page_size?: number;
+}): Promise<{ users: User[]; total: number; page: number; page_size: number }> {
+    const response = await apiClient.get('/users/', { params: filters });
     return response.data;
 }
 

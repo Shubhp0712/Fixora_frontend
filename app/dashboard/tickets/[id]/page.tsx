@@ -1,7 +1,8 @@
 'use client';
 
+import { use } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchTicket, fetchTicketActivities, updateTicketStatus, addTicketComment } from '@/lib/api';
+import { fetchTicket, fetchTicketActivities, updateTicketStatus, updateTicket, addTicketComment, assignTicket, fetchUsers } from '@/lib/api';
 import {
     formatDateTime,
     timeAgo,
@@ -14,12 +15,16 @@ import {
 } from '@/lib/utils';
 import Link from 'next/link';
 import { useState } from 'react';
-import { TicketStatus } from '@/lib/types';
+import { TicketStatus, TicketPriority } from '@/lib/types';
 
-export default function TicketDetailPage({ params }: { params: { id: string } }) {
-    const ticketId = parseInt(params.id);
+export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const ticketId = parseInt(id);
     const [comment, setComment] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<TicketStatus | ''>('');
+    const [selectedPriority, setSelectedPriority] = useState<TicketPriority | ''>('');
+    const [selectedAssignee, setSelectedAssignee] = useState<number | ''>('');
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: ticket, isLoading, error } = useQuery({
@@ -33,12 +38,36 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         enabled: !!ticket,
     });
 
+    const { data: usersData } = useQuery({
+        queryKey: ['users'],
+        queryFn: () => fetchUsers({ role: 'it_support' }),
+    });
+
     const updateStatusMutation = useMutation({
         mutationFn: (status: string) => updateTicketStatus(ticketId, status),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
             setSelectedStatus('');
+            setShowStatusDropdown(false);
+        },
+    });
+
+    const updatePriorityMutation = useMutation({
+        mutationFn: (priority: TicketPriority) => updateTicket(ticketId, { priority }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
+            queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
+            setSelectedPriority('');
+        },
+    });
+
+    const assignTicketMutation = useMutation({
+        mutationFn: (assignedToId: number) => assignTicket(ticketId, assignedToId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
+            queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
+            setSelectedAssignee('');
         },
     });
 
@@ -53,6 +82,18 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     const handleStatusUpdate = () => {
         if (selectedStatus) {
             updateStatusMutation.mutate(selectedStatus);
+        }
+    };
+
+    const handlePriorityUpdate = () => {
+        if (selectedPriority) {
+            updatePriorityMutation.mutate(selectedPriority);
+        }
+    };
+
+    const handleAssignment = () => {
+        if (selectedAssignee) {
+            assignTicketMutation.mutate(Number(selectedAssignee));
         }
     };
 
@@ -83,6 +124,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     }
 
     const statuses: TicketStatus[] = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'closed', 'cancelled'];
+    const priorities: TicketPriority[] = ['low', 'medium', 'high', 'urgent'];
 
     return (
         <div className="space-y-6">
@@ -242,27 +284,94 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
 
                 {/* Sidebar */}
                 <div className="space-y-6">
-                    {/* Update Status */}
+                    {/* Quick Actions */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Update Status</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                                className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                            >
+                                <span>📝</span>
+                                <span>Update Status</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Update Status */}
+                    {showStatusDropdown && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-4">Change Status</h3>
+                            <div className="space-y-2 mb-4">
+                                {statuses.map((status) => (
+                                    <button
+                                        key={status}
+                                        onClick={() => {
+                                            setSelectedStatus(status);
+                                            updateStatusMutation.mutate(status);
+                                        }}
+                                        disabled={ticket.status === status || updateStatusMutation.isPending}
+                                        className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
+                                            ticket.status === status
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                        }`}
+                                    >
+                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mr-2 ${getStatusColor(status)}`}>
+                                            {formatStatusName(status)}
+                                        </span>
+                                        {ticket.status === status && '(Current)'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Update Priority */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Update Priority</h3>
                         <select
-                            value={selectedStatus}
-                            onChange={(e) => setSelectedStatus(e.target.value as TicketStatus)}
+                            value={selectedPriority}
+                            onChange={(e) => setSelectedPriority(e.target.value as TicketPriority)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
                         >
-                            <option value="">Select status...</option>
-                            {statuses.map((status) => (
-                                <option key={status} value={status}>
-                                    {formatStatusName(status)}
+                            <option value="">Current: {formatPriorityName(ticket.priority)}</option>
+                            {priorities.map((priority) => (
+                                <option key={priority} value={priority} disabled={priority === ticket.priority}>
+                                    {formatPriorityName(priority)} {priority === ticket.priority ? '(Current)' : ''}
                                 </option>
                             ))}
                         </select>
                         <button
-                            onClick={handleStatusUpdate}
-                            disabled={!selectedStatus || updateStatusMutation.isPending}
-                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handlePriorityUpdate}
+                            disabled={!selectedPriority || updatePriorityMutation.isPending}
+                            className="w-full bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {updateStatusMutation.isPending ? 'Updating...' : 'Update Status'}
+                            {updatePriorityMutation.isPending ? 'Updating...' : 'Update Priority'}
+                        </button>
+                    </div>
+
+                    {/* Assign Ticket */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4">Assign Ticket</h3>
+                        <select
+                            value={selectedAssignee}
+                            onChange={(e) => setSelectedAssignee(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+                        >
+                            <option value="">Select IT Staff...</option>
+                            {usersData?.users?.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                    {user.full_name} ({user.email})
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            onClick={handleAssignment}
+                            disabled={!selectedAssignee || assignTicketMutation.isPending}
+                            className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {assignTicketMutation.isPending ? 'Assigning...' : 'Assign Ticket'}
                         </button>
                     </div>
 
@@ -276,24 +385,38 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                             </div>
                             <div>
                                 <span className="text-xs text-gray-500 uppercase tracking-wide">Created By</span>
-                                <p className="text-sm font-medium text-gray-900 mt-1">{ticket.user?.full_name || 'Unknown'}</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">
+                                    {ticket.user?.full_name || 'Unknown'}
+                                    <br />
+                                    <span className="text-xs text-gray-500">{ticket.user?.email}</span>
+                                </p>
                             </div>
                             {ticket.assigned_to && (
                                 <div>
                                     <span className="text-xs text-gray-500 uppercase tracking-wide">Assigned To</span>
-                                    <p className="text-sm font-medium text-gray-900 mt-1">{ticket.assigned_to.full_name}</p>
+                                    <p className="text-sm font-medium text-gray-900 mt-1">
+                                        {ticket.assigned_to.full_name}
+                                        <br />
+                                        <span className="text-xs text-gray-500">{ticket.assigned_to.email}</span>
+                                    </p>
                                 </div>
                             )}
                             {ticket.sla_deadline && (
                                 <div>
                                     <span className="text-xs text-gray-500 uppercase tracking-wide">SLA Deadline</span>
-                                    <p className="text-sm font-medium text-gray-900 mt-1">{formatDateTime(ticket.sla_deadline)}</p>
+                                    <p className="text-sm font-medium text-red-600 mt-1">{formatDateTime(ticket.sla_deadline)}</p>
                                 </div>
                             )}
                             <div>
                                 <span className="text-xs text-gray-500 uppercase tracking-wide">Last Updated</span>
                                 <p className="text-sm font-medium text-gray-900 mt-1">{timeAgo(ticket.updated_at)}</p>
                             </div>
+                            {ticket.resolved_at && (
+                                <div>
+                                    <span className="text-xs text-gray-500 uppercase tracking-wide">Resolved At</span>
+                                    <p className="text-sm font-medium text-green-600 mt-1">{formatDateTime(ticket.resolved_at)}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

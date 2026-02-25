@@ -21,14 +21,24 @@ export default function TicketsPage() {
         priority: '',
         category: '',
         page: 1,
-        per_page: 10,
+        page_size: 10,
     });
     const [searchQuery, setSearchQuery] = useState('');
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['tickets', filters],
-        queryFn: () => fetchTickets(filters),
+        queryFn: () => {
+            console.log('Fetching tickets with filters:', filters);
+            return fetchTickets(filters);
+        },
     });
+
+    console.log('Tickets Data:', data);
+    console.log('Tickets Error:', error);
+    console.log('Is Loading:', isLoading);
+
+    console.log('Tickets data:', data);
+    console.log('Error:', error);
 
     const statuses: TicketStatus[] = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'closed', 'cancelled'];
     const priorities: TicketPriority[] = ['low', 'medium', 'high', 'urgent'];
@@ -39,7 +49,7 @@ export default function TicketsPage() {
     };
 
     const clearFilters = () => {
-        setFilters({ status: '', priority: '', category: '', page: 1, per_page: 10 });
+        setFilters({ status: '', priority: '', category: '', page: 1, page_size: 10 });
         setSearchQuery('');
     };
 
@@ -165,9 +175,52 @@ export default function TicketsPage() {
                             <span className="text-2xl">⚠️</span>
                         </div>
                         <p className="text-gray-900 font-medium mb-2">Error loading tickets</p>
-                        <p className="text-gray-500 text-sm">Please try again later or contact support</p>
+                        <p className="text-gray-500 text-sm mb-4">
+                            {error instanceof Error ? error.message : 'Please try again later or contact support'}
+                        </p>
+                        <div className="text-xs text-gray-400 mb-4">
+                            Debug: {JSON.stringify(error, null, 2)}
+                        </div>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            Retry
+                        </button>
                     </div>
-                ) : data?.data && data.data.length > 0 ? (
+                ) : !data ? (
+                    <div className="p-12 text-center">
+                        <p className="text-gray-500">No data received from API</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            Reload
+                        </button>
+                    </div>
+                ) : !data.tickets ? (
+                    <div className="p-12 text-center">
+                        <p className="text-gray-500">Data received but no tickets array</p>
+                        <div className="text-xs text-gray-400 mt-2">
+                            Response: {JSON.stringify(data, null, 2)}
+                        </div>
+                    </div>
+                ) : data.tickets.length === 0 ? (
+                    <div className="p-12 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                            <span className="text-3xl">🎫</span>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
+                        <p className="text-gray-500 mb-6">
+                            {filters.status || filters.priority || filters.category || searchQuery
+                                ? 'Try adjusting your filters or search query'
+                                : 'Create your first ticket to get started'}
+                        </p>
+                        <button className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            Create New Ticket
+                        </button>
+                    </div>
+                ) : (
                     <>
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -197,7 +250,7 @@ export default function TicketsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {data.data.map((ticket) => (
+                                    {data.tickets.map((ticket) => (
                                         <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-start space-x-3">
@@ -256,10 +309,10 @@ export default function TicketsPage() {
                         </div>
 
                         {/* Pagination */}
-                        {data.total_pages > 1 && (
+                        {data.total > data.page_size && (
                             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                                 <div className="text-sm text-gray-500">
-                                    Showing {(data.page - 1) * data.per_page + 1} to {Math.min(data.page * data.per_page, data.total)} of {data.total} results
+                                    Showing {(data.page - 1) * data.page_size + 1} to {Math.min(data.page * data.page_size, data.total)} of {data.total} results
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <button
@@ -270,11 +323,11 @@ export default function TicketsPage() {
                                         Previous
                                     </button>
                                     <span className="text-sm text-gray-700">
-                                        Page {data.page} of {data.total_pages}
+                                        Page {data.page} of {Math.ceil(data.total / data.page_size)}
                                     </span>
                                     <button
                                         onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
-                                        disabled={data.page === data.total_pages}
+                                        disabled={data.page >= Math.ceil(data.total / data.page_size)}
                                         className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         Next
@@ -283,21 +336,6 @@ export default function TicketsPage() {
                             </div>
                         )}
                     </>
-                ) : (
-                    <div className="p-12 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                            <span className="text-3xl">🎫</span>
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
-                        <p className="text-gray-500 mb-6">
-                            {filters.status || filters.priority || filters.category || searchQuery
-                                ? 'Try adjusting your filters or search query'
-                                : 'Create your first ticket to get started'}
-                        </p>
-                        <button className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                            Create New Ticket
-                        </button>
-                    </div>
                 )}
             </div>
         </div>

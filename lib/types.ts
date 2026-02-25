@@ -78,8 +78,9 @@ export interface Attachment {
 export interface DashboardStats {
     total_tickets: number;
     open_tickets: number;
+    in_progress_tickets: number;
     resolved_today: number;
-    average_resolution_time: number;
+    average_resolution_hours: number;
 }
 
 export interface TicketCreate {
@@ -104,9 +105,10 @@ export interface TicketComment {
 }
 
 export interface PaginatedResponse<T> {
-    data: T[];
+    tickets?: T[];
+    users?: T[];
+    articles?: T[];
     total: number;
     page: number;
-    per_page: number;
-    total_pages: number;
+    page_size: number;
 }

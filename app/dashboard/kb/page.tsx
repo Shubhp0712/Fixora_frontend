@@ -24,7 +24,7 @@ export default function KnowledgeBasePage() {
 
     const categories: TicketCategory[] = ['hardware', 'software', 'network', 'access', 'email', 'printer', 'account', 'other'];
 
-    const displayArticles = searchQuery.length > 2 ? searchResults : articles?.data;
+    const displayArticles = searchQuery.length > 2 ? searchResults?.results : articles?.articles;
 
     return (
         <div className="space-y-6">

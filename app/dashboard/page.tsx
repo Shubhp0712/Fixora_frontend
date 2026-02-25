@@ -13,7 +13,7 @@ export default function DashboardPage() {
 
     const { data: recentTickets, isLoading: ticketsLoading } = useQuery({
         queryKey: ['recent-tickets'],
-        queryFn: () => fetchTickets({ page: 1, per_page: 5 }),
+        queryFn: () => fetchTickets({ page: 1, page_size: 5 }),
     });
 
     return (
@@ -82,7 +82,7 @@ export default function DashboardPage() {
                         <div>
                             <p className="text-sm font-medium text-gray-600">Avg Resolution</p>
                             <p className="text-3xl font-bold text-gray-900 mt-2">
-                                {statsLoading ? '...' : `${stats?.average_resolution_time || 0}h`}
+                                {statsLoading ? '...' : `${stats?.average_resolution_hours || 0}h`}
                             </p>
                         </div>
                         <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -110,7 +110,7 @@ export default function DashboardPage() {
 
                 {ticketsLoading ? (
                     <div className="p-8 text-center text-gray-500">Loading tickets...</div>
-                ) : recentTickets?.data && recentTickets.data.length > 0 ? (
+                ) : recentTickets?.tickets && recentTickets.tickets.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
@@ -133,7 +133,7 @@ export default function DashboardPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {recentTickets.data.map((ticket) => (
+                                {recentTickets.tickets.map((ticket) => (
                                     <tr key={ticket.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4">
                                             <div>

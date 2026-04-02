@@ -16,8 +16,10 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { TicketStatus, TicketPriority } from '@/lib/types';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { can } = useAuth();
     const { id } = use(params);
     const ticketId = parseInt(id);
     const [comment, setComment] = useState('');
@@ -44,7 +46,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     });
 
     const updateStatusMutation = useMutation({
-        mutationFn: (status: string) => updateTicketStatus(ticketId, status),
+        mutationFn: (status: string) => {
+            if (!can('ticket:update_status')) {
+                throw new Error('You do not have permission to update ticket status.');
+            }
+            return updateTicketStatus(ticketId, status);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
@@ -54,7 +61,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     });
 
     const updatePriorityMutation = useMutation({
-        mutationFn: (priority: TicketPriority) => updateTicket(ticketId, { priority }),
+        mutationFn: (priority: TicketPriority) => {
+            if (!can('ticket:update_priority')) {
+                throw new Error('You do not have permission to update ticket priority.');
+            }
+            return updateTicket(ticketId, { priority });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
@@ -63,7 +75,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     });
 
     const assignTicketMutation = useMutation({
-        mutationFn: (assignedToId: number) => assignTicket(ticketId, assignedToId),
+        mutationFn: (assignedToId: number) => {
+            if (!can('ticket:assign')) {
+                throw new Error('You do not have permission to assign tickets.');
+            }
+            return assignTicket(ticketId, assignedToId);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
@@ -72,7 +89,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     });
 
     const addCommentMutation = useMutation({
-        mutationFn: (commentText: string) => addTicketComment(ticketId, commentText),
+        mutationFn: (commentText: string) => {
+            if (!can('ticket:comment')) {
+                throw new Error('You do not have permission to comment on tickets.');
+            }
+            return addTicketComment(ticketId, commentText);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
             setComment('');
@@ -232,6 +254,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h3>
 
+                        {!can('ticket:comment') ? (
+                            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                                Your role is read-only for comments on this ticket.
+                            </div>
+                        ) : null}
+
                         <div className="space-y-4 mb-6">
                             {activities && activities.length > 0 ? (
                                 activities.map((activity) => (
@@ -272,7 +300,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                             <div className="mt-3 flex justify-end">
                                 <button
                                     onClick={handleAddComment}
-                                    disabled={!comment.trim() || addCommentMutation.isPending}
+                                    disabled={!can('ticket:comment') || !comment.trim() || addCommentMutation.isPending}
                                     className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {addCommentMutation.isPending ? 'Adding...' : 'Add Comment'}
@@ -290,7 +318,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <div className="space-y-3">
                             <button
                                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                                className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                                disabled={!can('ticket:update_status')}
+                                title={can('ticket:update_status') ? 'Update status' : 'Not allowed for your role'}
+                                className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span>📝</span>
                                 <span>Update Status</span>
@@ -299,7 +329,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     </div>
 
                     {/* Update Status */}
-                    {showStatusDropdown && (
+                    {showStatusDropdown && can('ticket:update_status') && (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <h3 className="text-sm font-semibold text-gray-900 mb-4">Change Status</h3>
                             <div className="space-y-2 mb-4">
@@ -311,11 +341,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                                             updateStatusMutation.mutate(status);
                                         }}
                                         disabled={ticket.status === status || updateStatusMutation.isPending}
-                                        className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
-                                            ticket.status === status
+                                        className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${ticket.status === status
                                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mr-2 ${getStatusColor(status)}`}>
                                             {formatStatusName(status)}
@@ -333,6 +362,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <select
                             value={selectedPriority}
                             onChange={(e) => setSelectedPriority(e.target.value as TicketPriority)}
+                            disabled={!can('ticket:update_priority')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
                         >
                             <option value="">Current: {formatPriorityName(ticket.priority)}</option>
@@ -344,7 +374,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         </select>
                         <button
                             onClick={handlePriorityUpdate}
-                            disabled={!selectedPriority || updatePriorityMutation.isPending}
+                            disabled={!can('ticket:update_priority') || !selectedPriority || updatePriorityMutation.isPending}
                             className="w-full bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updatePriorityMutation.isPending ? 'Updating...' : 'Update Priority'}
@@ -356,7 +386,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <h3 className="text-sm font-semibold text-gray-900 mb-4">Assign Ticket</h3>
                         <select
                             value={selectedAssignee}
-                            onChange={(e) => setSelectedAssignee(e.target.value)}
+                            onChange={(e) => setSelectedAssignee(e.target.value ? Number(e.target.value) : '')}
+                            disabled={!can('ticket:assign')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
                         >
                             <option value="">Select IT Staff...</option>
@@ -368,7 +399,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         </select>
                         <button
                             onClick={handleAssignment}
-                            disabled={!selectedAssignee || assignTicketMutation.isPending}
+                            disabled={!can('ticket:assign') || !selectedAssignee || assignTicketMutation.isPending}
                             className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {assignTicketMutation.isPending ? 'Assigning...' : 'Assign Ticket'}

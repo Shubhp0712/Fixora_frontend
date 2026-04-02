@@ -19,7 +19,7 @@ export default function Home() {
           <span className="text-white text-2xl font-bold">Fixora</span>
         </div>
         <Link
-          href="/dashboard"
+          href="/login"
           className="bg-white/10 backdrop-blur-sm text-white px-6 py-2 rounded-lg font-medium hover:bg-white/20 transition-all border border-white/20"
         >
           Login
@@ -46,7 +46,7 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
           <Link
-            href="/dashboard"
+            href="/login"
             className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl overflow-hidden shadow-2xl hover:scale-105 transition-transform"
           >
             <span className="relative z-10 flex items-center">
@@ -173,7 +173,7 @@ export default function Home() {
             Join thousands of teams already using Fixora to deliver exceptional IT support
           </p>
           <Link
-            href="/dashboard"
+            href="/login"
             className="inline-flex items-center justify-center px-10 py-5 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-2xl hover:scale-105 transition-transform"
           >
             Start Free Trial

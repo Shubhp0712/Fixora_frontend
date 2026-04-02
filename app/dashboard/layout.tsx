@@ -3,16 +3,34 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
+import { useAuth } from '@/components/AuthProvider';
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Tickets', href: '/dashboard/tickets', icon: '🎫' },
     { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
     { name: 'Knowledge Base', href: '/dashboard/kb', icon: '📚' },
+    { name: 'Admin', href: '/dashboard/admin', icon: '🛡️', requires: 'admin:access' as const },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
+    const { session, can, logout, roleLabel, isBootstrapping } = useAuth();
+
+    if (isBootstrapping) {
+        return <div className="min-h-screen grid place-items-center">Loading...</div>;
+    }
+
+    if (!session) {
+        return null;
+    }
+
+    const visibleNavigation = navigation.filter((item) => {
+        if (!item.requires) {
+            return true;
+        }
+        return can(item.requires);
+    });
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -30,15 +48,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
                 {/* Navigation */}
                 <nav className="flex-1 px-4 py-6 space-y-1">
-                    {navigation.map((item) => {
+                    {visibleNavigation.map((item) => {
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                                     }`}
                             >
                                 <span className="text-xl mr-3">{item.icon}</span>
@@ -50,15 +68,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
                 {/* User Profile */}
                 <div className="p-4 border-t border-gray-200">
-                    <div className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer">
+                    <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            IT
+                            {session.user.fullName
+                                .split(' ')
+                                .map((item) => item.charAt(0))
+                                .slice(0, 2)
+                                .join('')
+                                .toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">IT Admin</p>
-                            <p className="text-xs text-gray-500 truncate">admin@fixora.com</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">{session.user.fullName}</p>
+                            <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                            <p className="text-xs text-indigo-700 truncate">{roleLabel} • {session.user.organizationName}</p>
                         </div>
                     </div>
+                    <button
+                        onClick={() => logout('You have been logged out successfully.')}
+                        className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                        Logout
+                    </button>
                 </div>
             </aside>
 

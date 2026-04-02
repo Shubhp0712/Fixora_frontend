@@ -11,10 +11,9 @@ import {
     TicketActivity,
     PaginatedResponse
 } from './types';
+import { getSession } from './session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-
-console.log('API_URL configured as:', API_URL);
 
 const apiClient = axios.create({
     baseURL: API_URL,
@@ -23,30 +22,29 @@ const apiClient = axios.create({
     },
 });
 
-// Add request/response interceptors for debugging
 apiClient.interceptors.request.use(
     (config) => {
-        console.log('API Request:', config.method?.toUpperCase(), config.baseURL + config.url, config.params);
+        if (typeof window !== 'undefined') {
+            const session = getSession();
+            if (session?.token) {
+                config.headers.Authorization = `Bearer ${session.token}`;
+            }
+            if (session?.user.organizationId) {
+                config.headers['X-Organization-Id'] = session.user.organizationId;
+            }
+        }
         return config;
     },
-    (error) => {
-        console.error('API Request Error:', error);
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 apiClient.interceptors.response.use(
-    (response) => {
-        console.log('API Response:', response.status, response.config.url);
-        return response;
-    },
+    (response) => response,
     (error) => {
-        console.error('API Response Error:', {
-            message: error.message,
-            url: error.config?.url,
-            status: error.response?.status,
-            data: error.response?.data,
-        });
+        const status = error?.response?.status;
+        if (typeof window !== 'undefined' && (status === 401 || status === 403)) {
+            window.dispatchEvent(new CustomEvent('fixora:auth-error'));
+        }
         return Promise.reject(error);
     }
 );

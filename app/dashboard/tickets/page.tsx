@@ -14,8 +14,10 @@ import {
 } from '@/lib/utils';
 import Link from 'next/link';
 import { TicketCategory, TicketPriority, TicketStatus } from '@/lib/types';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function TicketsPage() {
+    const { can } = useAuth();
     const [filters, setFilters] = useState({
         status: '',
         priority: '',
@@ -27,18 +29,8 @@ export default function TicketsPage() {
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['tickets', filters],
-        queryFn: () => {
-            console.log('Fetching tickets with filters:', filters);
-            return fetchTickets(filters);
-        },
+        queryFn: () => fetchTickets(filters),
     });
-
-    console.log('Tickets Data:', data);
-    console.log('Tickets Error:', error);
-    console.log('Is Loading:', isLoading);
-
-    console.log('Tickets data:', data);
-    console.log('Error:', error);
 
     const statuses: TicketStatus[] = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'closed', 'cancelled'];
     const priorities: TicketPriority[] = ['low', 'medium', 'high', 'urgent'];
@@ -61,7 +53,11 @@ export default function TicketsPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Ticket Management</h1>
                     <p className="text-gray-500 mt-1">Manage and track all support tickets</p>
                 </div>
-                <button className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <button
+                    disabled={!can('ticket:create')}
+                    title={can('ticket:create') ? 'Create ticket' : 'You do not have permission to create tickets'}
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     <span>+</span>
                     <span>Create Ticket</span>
                 </button>

@@ -223,9 +223,9 @@ export default function AnalyticsPage() {
                             <div className="bg-white rounded-lg p-4">
                                 <p className="text-sm text-gray-600 mb-1">Average Confidence</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {allTickets?.data
+                                    {allTickets?.tickets?.length
                                         ? Math.round(
-                                            (allTickets.data.reduce((sum, t) => sum + (t.ai_confidence || 0), 0) / allTickets.data.length) * 100
+                                            (allTickets.tickets.reduce((sum, t) => sum + (t.ai_confidence || 0), 0) / allTickets.tickets.length) * 100
                                         )
                                         : 0}%
                                 </p>
@@ -233,14 +233,14 @@ export default function AnalyticsPage() {
                             <div className="bg-white rounded-lg p-4">
                                 <p className="text-sm text-gray-600 mb-1">AI Classified</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {allTickets?.data ? allTickets.data.filter(t => t.ai_classification).length : 0}
+                                    {allTickets?.tickets ? allTickets.tickets.filter(t => t.ai_classification).length : 0}
                                 </p>
                             </div>
                             <div className="bg-white rounded-lg p-4">
                                 <p className="text-sm text-gray-600 mb-1">Automation Rate</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {allTickets?.data
-                                        ? Math.round((allTickets.data.filter(t => t.ai_classification).length / allTickets.data.length) * 100)
+                                    {allTickets?.tickets?.length
+                                        ? Math.round((allTickets.tickets.filter(t => t.ai_classification).length / allTickets.tickets.length) * 100)
                                         : 0}%
                                 </p>
                             </div>

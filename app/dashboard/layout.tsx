@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {/* Logo */}
                 <div className="h-16 flex items-center px-6 border-b border-gray-200">
                     <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                             <span className="text-white font-bold">F</span>
                         </div>
                         <span className="text-xl font-bold text-gray-900">Fixora</span>
@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {/* User Profile */}
                 <div className="p-4 border-t border-gray-200">
                     <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
                             {session.user.fullName
                                 .split(' ')
                                 .map((item) => item.charAt(0))
@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{session.user.fullName}</p>
                             <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
-                            <p className="text-xs text-indigo-700 truncate">{roleLabel} • {session.user.organizationName}</p>
+                            <p className="text-xs text-indigo-700 truncate">{roleLabel}</p>
                         </div>
                     </div>
                     <button

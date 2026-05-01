@@ -9,12 +9,11 @@ export type SessionUser = {
     fullName: string;
     email: string;
     role: AppRole;
-    organizationId: string;
-    organizationName: string;
 };
 
 export type SessionData = {
     token: string;
+    refreshToken: string;
     user: SessionUser;
     expiresAt: number;
 };
@@ -48,7 +47,6 @@ function setSessionCookie(session: SessionData): void {
     const payload = toBase64(JSON.stringify({
         token: session.token,
         role: session.user.role,
-        organizationId: session.user.organizationId,
         expiresAt: session.expiresAt,
     }));
     document.cookie = `${SESSION_COOKIE_KEY}=${payload}; ${getCookieDomainPath()}`;
@@ -59,10 +57,23 @@ function clearSessionCookie(): void {
     document.cookie = `${SESSION_COOKIE_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
 }
 
-export function buildSession(user: SessionUser): SessionData {
-    const expiresAt = Date.now() + DEFAULT_TIMEOUT_MINUTES * 60 * 1000;
+function readJwtExpiry(token: string): number | null {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return null;
+        const decoded = JSON.parse(fromBase64(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        if (typeof decoded.exp !== 'number') return null;
+        return decoded.exp * 1000;
+    } catch {
+        return null;
+    }
+}
+
+export function buildSession(user: SessionUser, token: string, refreshToken: string): SessionData {
+    const expiresAt = readJwtExpiry(token) ?? (Date.now() + DEFAULT_TIMEOUT_MINUTES * 60 * 1000);
     return {
-        token: `fxr_${Math.random().toString(36).slice(2)}_${Date.now()}`,
+        token,
+        refreshToken,
         user,
         expiresAt,
     };
@@ -103,9 +114,10 @@ export function refreshSessionTimeout(): SessionData | null {
     const session = getSession();
     if (!session) return null;
 
+    const tokenExpiry = readJwtExpiry(session.token);
     const updated: SessionData = {
         ...session,
-        expiresAt: Date.now() + DEFAULT_TIMEOUT_MINUTES * 60 * 1000,
+        expiresAt: tokenExpiry ?? (Date.now() + DEFAULT_TIMEOUT_MINUTES * 60 * 1000),
     };
     saveSession(updated);
     return updated;
@@ -114,7 +126,6 @@ export function refreshSessionTimeout(): SessionData | null {
 export function decodeCookieSession(cookieValue: string): {
     token?: string;
     role?: AppRole;
-    organizationId?: string;
     expiresAt?: number;
 } | null {
     try {

@@ -23,7 +23,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const { id } = use(params);
     const ticketId = parseInt(id);
     const [comment, setComment] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<TicketStatus | ''>('');
     const [selectedPriority, setSelectedPriority] = useState<TicketPriority | ''>('');
     const [selectedAssignee, setSelectedAssignee] = useState<number | ''>('');
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -55,7 +54,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
             queryClient.invalidateQueries({ queryKey: ['ticket-activities', ticketId] });
-            setSelectedStatus('');
             setShowStatusDropdown(false);
         },
     });
@@ -101,12 +99,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         },
     });
 
-    const handleStatusUpdate = () => {
-        if (selectedStatus) {
-            updateStatusMutation.mutate(selectedStatus);
-        }
-    };
-
     const handlePriorityUpdate = () => {
         if (selectedPriority) {
             updatePriorityMutation.mutate(selectedPriority);
@@ -137,7 +129,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         return (
             <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Ticket Not Found</h2>
-                <p className="text-gray-500 mb-6">The ticket you're looking for doesn't exist.</p>
+                <p className="text-gray-500 mb-6">The ticket you&apos;re looking for doesn&apos;t exist.</p>
                 <Link href="/dashboard/tickets" className="text-blue-600 hover:text-blue-700">
                     ← Back to Tickets
                 </Link>
@@ -198,9 +190,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
                     {/* AI Classification */}
                     {ticket.ai_classification && (
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                        <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
                             <div className="flex items-start space-x-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shrink-0">
                                     <span className="text-xl">🤖</span>
                                 </div>
                                 <div className="flex-1">
@@ -234,7 +226,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-3">
                                                 <div
-                                                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all"
+                                                    className="bg-linear-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all"
                                                     style={{ width: `${ticket.ai_confidence * 100}%` }}
                                                 ></div>
                                             </div>
@@ -264,7 +256,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                             {activities && activities.length > 0 ? (
                                 activities.map((activity) => (
                                     <div key={activity.id} className="flex space-x-3">
-                                        <div className="flex-shrink-0">
+                                        <div className="shrink-0">
                                             <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                                                 <span className="text-xs font-semibold text-gray-600">
                                                     {activity.user?.full_name?.charAt(0) || 'U'}
@@ -337,7 +329,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                                     <button
                                         key={status}
                                         onClick={() => {
-                                            setSelectedStatus(status);
                                             updateStatusMutation.mutate(status);
                                         }}
                                         disabled={ticket.status === status || updateStatusMutation.isPending}

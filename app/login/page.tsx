@@ -2,40 +2,25 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { AppRole } from '@/lib/rbac';
-
-const ORGANIZATIONS = [
-    { id: 'org_alpha', name: 'Alpha Corp' },
-    { id: 'org_beta', name: 'Beta Industries' },
-];
-
-const ROLES: AppRole[] = ['employee', 'it_support', 'manager', 'admin'];
-
-function roleLabel(role: AppRole): string {
-    if (role === 'it_support') return 'IT Support';
-    return role.charAt(0).toUpperCase() + role.slice(1);
-}
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { login, isAuthenticated, isBootstrapping } = useAuth();
 
     const [email, setEmail] = useState('');
-    const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState<AppRole>('employee');
-    const [organizationId, setOrganizationId] = useState(ORGANIZATIONS[0].id);
-    const [authMessage, setAuthMessage] = useState('');
-
-    useEffect(() => {
-        const message = sessionStorage.getItem('fixora.auth.message');
+    const [authMessage, setAuthMessage] = useState(() => {
+        if (typeof window === 'undefined') return '';
+        const message = sessionStorage.getItem('fixora.auth.message') || '';
         if (message) {
-            setAuthMessage(message);
             sessionStorage.removeItem('fixora.auth.message');
         }
-    }, []);
+        return message;
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!isBootstrapping && isAuthenticated) {
@@ -43,19 +28,20 @@ export default function LoginPage() {
         }
     }, [isAuthenticated, isBootstrapping, router]);
 
-    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        const selectedOrg = ORGANIZATIONS.find((org) => org.id === organizationId);
-        if (!selectedOrg) return;
-
-        login({
+        setIsSubmitting(true);
+        const result = await login({
             email,
-            fullName,
-            role,
-            organizationId: selectedOrg.id,
-            organizationName: selectedOrg.name,
+            password,
+            redirectTo: searchParams.get('redirect') || '/dashboard',
         });
+
+        if (!result.ok) {
+            setAuthMessage(result.message);
+        }
+        setIsSubmitting(false);
     };
 
     if (isBootstrapping) {
@@ -63,7 +49,7 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-4 py-10">
+        <div className="min-h-screen bg-linear-to-br from-slate-900 via-blue-900 to-slate-900 px-4 py-10">
             <div className="mx-auto max-w-md rounded-2xl border border-white/15 bg-white/10 backdrop-blur-lg p-8 shadow-2xl">
                 <div className="mb-6 text-center">
                     <h1 className="text-3xl font-bold text-white">Fixora Login</h1>
@@ -77,18 +63,6 @@ export default function LoginPage() {
                 ) : null}
 
                 <form onSubmit={onSubmit} className="space-y-4">
-                    <div>
-                        <label className="mb-1 block text-sm text-slate-200">Full Name</label>
-                        <input
-                            type="text"
-                            required
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            className="w-full rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                            placeholder="Jane Doe"
-                        />
-                    </div>
-
                     <div>
                         <label className="mb-1 block text-sm text-slate-200">Email</label>
                         <input
@@ -113,43 +87,12 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="mb-1 block text-sm text-slate-200">Organization</label>
-                            <select
-                                value={organizationId}
-                                onChange={(e) => setOrganizationId(e.target.value)}
-                                className="w-full rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                            >
-                                {ORGANIZATIONS.map((org) => (
-                                    <option key={org.id} value={org.id}>
-                                        {org.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="mb-1 block text-sm text-slate-200">Role</label>
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value as AppRole)}
-                                className="w-full rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white outline-none focus:border-blue-300"
-                            >
-                                {ROLES.map((item) => (
-                                    <option key={item} value={item}>
-                                        {roleLabel(item)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
                     <button
                         type="submit"
-                        className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 py-2.5 font-semibold text-white transition hover:from-blue-500 hover:to-indigo-500"
+                        disabled={isSubmitting}
+                        className="w-full rounded-lg bg-linear-to-r from-blue-600 to-indigo-600 py-2.5 font-semibold text-white transition hover:from-blue-500 hover:to-indigo-500"
                     >
-                        Sign In
+                        {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
 
@@ -160,6 +103,13 @@ export default function LoginPage() {
                 <div className="mt-4 text-center text-sm">
                     <Link href="/" className="text-blue-200 hover:text-blue-100">
                         Back to home
+                    </Link>
+                </div>
+
+                <div className="mt-2 text-center text-xs text-slate-300">
+                    First-time setup?{' '}
+                    <Link href="/signup" className="text-blue-200 hover:text-blue-100">
+                        Create first admin
                     </Link>
                 </div>
             </div>

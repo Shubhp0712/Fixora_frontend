@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchTickets, fetchDashboardStats } from '@/lib/api';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCategoryName, formatStatusName, formatPriorityName } from '@/lib/utils';
+import { TicketCategory, TicketPriority, TicketStatus } from '@/lib/types';
 
 const COLORS = {
     category: ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#64748B'],
@@ -30,7 +31,7 @@ export default function AnalyticsPage() {
             categoryCount[ticket.category] = (categoryCount[ticket.category] || 0) + 1;
         });
         return Object.entries(categoryCount).map(([name, value]) => ({
-            name: formatCategoryName(name as any),
+            name: formatCategoryName(name as TicketCategory),
             value,
         }));
     };
@@ -42,7 +43,7 @@ export default function AnalyticsPage() {
             statusCount[ticket.status] = (statusCount[ticket.status] || 0) + 1;
         });
         return Object.entries(statusCount).map(([name, value]) => ({
-            name: formatStatusName(name as any),
+            name: formatStatusName(name as TicketStatus),
             value,
         }));
     };
@@ -54,7 +55,7 @@ export default function AnalyticsPage() {
             priorityCount[ticket.priority] = (priorityCount[ticket.priority] || 0) + 1;
         });
         return Object.entries(priorityCount).map(([name, value]) => ({
-            name: formatPriorityName(name as any),
+            name: formatPriorityName(name as TicketPriority),
             Tickets: value,
         }));
     };
@@ -99,7 +100,7 @@ export default function AnalyticsPage() {
 
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-blue-100 text-sm font-medium">Total Tickets</span>
                         <span className="text-3xl">🎫</span>
@@ -108,7 +109,7 @@ export default function AnalyticsPage() {
                     <p className="text-blue-100 text-sm mt-2">All time</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-green-100 text-sm font-medium">Resolution Rate</span>
                         <span className="text-3xl">✅</span>
@@ -121,7 +122,7 @@ export default function AnalyticsPage() {
                     <p className="text-green-100 text-sm mt-2">Success rate</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-purple-100 text-sm font-medium">Avg Resolution</span>
                         <span className="text-3xl">⏱️</span>
@@ -130,7 +131,7 @@ export default function AnalyticsPage() {
                     <p className="text-purple-100 text-sm mt-2">Time to resolve</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+                <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-orange-100 text-sm font-medium">Open Tickets</span>
                         <span className="text-3xl">🔓</span>
@@ -212,9 +213,9 @@ export default function AnalyticsPage() {
             </div>
 
             {/* AI Classification Insights */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+            <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
                 <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shrink-0">
                         <span className="text-2xl">🤖</span>
                     </div>
                     <div className="flex-1">

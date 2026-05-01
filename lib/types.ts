@@ -18,6 +18,15 @@ export interface User {
     updated_at: string;
 }
 
+export interface UserCreateRequest {
+    email: string;
+    full_name: string;
+    password: string;
+    role: UserRole;
+    department?: string;
+    phone?: string;
+}
+
 export interface Ticket {
     id: number;
     ticket_number: string;

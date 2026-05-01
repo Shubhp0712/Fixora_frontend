@@ -4,12 +4,11 @@ import {
     Ticket,
     TicketCreate,
     TicketUpdate,
-    TicketComment,
     KnowledgeBase,
     DashboardStats,
     User,
     TicketActivity,
-    PaginatedResponse
+    UserCreateRequest
 } from './types';
 import { getSession } from './session';
 
@@ -28,9 +27,6 @@ apiClient.interceptors.request.use(
             const session = getSession();
             if (session?.token) {
                 config.headers.Authorization = `Bearer ${session.token}`;
-            }
-            if (session?.user.organizationId) {
-                config.headers['X-Organization-Id'] = session.user.organizationId;
             }
         }
         return config;
@@ -58,7 +54,7 @@ export async function fetchTickets(filters?: {
     page_size?: number;
 }): Promise<{ tickets: Ticket[]; total: number; page: number; page_size: number }> {
     // Remove empty string values from params - backend rejects them with 422
-    const cleanParams: Record<string, any> = {};
+    const cleanParams: Record<string, string | number | boolean> = {};
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
             // Only include the param if it's not an empty string
@@ -162,6 +158,11 @@ export async function fetchUsers(filters?: {
     page_size?: number;
 }): Promise<{ users: User[]; total: number; page: number; page_size: number }> {
     const response = await apiClient.get('/users/', { params: filters });
+    return response.data;
+}
+
+export async function createUser(data: UserCreateRequest): Promise<User> {
+    const response = await apiClient.post('/users/', data);
     return response.data;
 }
 
